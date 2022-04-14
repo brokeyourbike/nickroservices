@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option go_package = "github.com/brokeyourbike/nickroservices/protos";
+
+service Currency {
+    rpc GetRate(RateRequest) returns (RateResponse);
+}
+
+message RateRequest {
+    string Base = 1;
+    string Destination = 2;
+}
+
+message RateResponse {
+    float Rate = 1;
+}

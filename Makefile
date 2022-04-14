@@ -1,6 +1,5 @@
-install:
-	brew tap go-swagger/go-swagger
-	brew install go-swagger
+.PHONY: protos
 
-swagger:
-	GO111MODULE=off swagger generate spec -o ./swagger.yaml --scan-models
+protos:
+	protoc -I protos/ protos/currency.proto --go_out=protos --go_opt=paths=source_relative
+	protoc -I protos/ protos/currency.proto --go-grpc_out=protos --go-grpc_opt=paths=source_relative
