@@ -8,6 +8,7 @@ import (
 	"github.com/brokeyourbike/nickroservices/server"
 	"github.com/hashicorp/go-hclog"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
@@ -24,5 +25,6 @@ func main() {
 
 	protos.RegisterCurrencyServer(gs, cs)
 
+	reflection.Register(gs)
 	gs.Serve(l)
 }
