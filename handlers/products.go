@@ -1,3 +1,15 @@
+// Documentation for Product API
+//
+// Schemes: http
+// BasePath: /
+// Version: 0.0.1
+//
+// Consumes:
+// - application/json
+//
+// Produces:
+// - application/json
+// swagger:meta
 package handlers
 
 import (
@@ -19,6 +31,12 @@ func NewProducts(l *log.Logger) *Products {
 	return &Products{l}
 }
 
+// GetProducts returns products from the dat store
+//
+// swagger:route GET /products products listProducts
+// Return a list of products
+// Responses:
+// 200: productsResponse
 func (p *Products) GetProducts(w http.ResponseWriter, r *http.Request) {
 	productList := data.GetProducts()
 
