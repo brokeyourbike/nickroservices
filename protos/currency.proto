@@ -1,10 +1,12 @@
 syntax = "proto3";
 
+import "google/rpc/status.proto";
+
 option go_package = "github.com/brokeyourbike/nickroservices/protos";
 
 service Currency {
     rpc GetRate(RateRequest) returns (RateResponse);
-    rpc Subscriberates(stream RateRequest) returns (stream RateResponse);
+    rpc Subscriberates(stream RateRequest) returns (stream StreamingRateResponse);
 }
 
 message RateRequest {
@@ -16,6 +18,13 @@ message RateResponse {
     Currencies Base = 1;
     Currencies Destination = 2;
     double Rate = 3;
+}
+
+message StreamingRateResponse {
+    oneof message {
+        RateResponse rate_response = 1;
+        google.rpc.Status error = 2; 
+    }
 }
 
 enum Currencies {

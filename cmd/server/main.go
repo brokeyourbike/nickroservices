@@ -43,7 +43,9 @@ func (c *Currency) handleUpdates() {
 					c.log.Error("Unable to get update rate", "base", rr.GetBase(), "dest", rr.GetDestination(), "error", err)
 				}
 
-				err = k.Send(&protos.RateResponse{Base: rr.GetBase(), Destination: rr.GetDestination(), Rate: r})
+				err = k.Send(&protos.StreamingRateResponse{Message: &protos.StreamingRateResponse_RateResponse{
+					RateResponse: &protos.RateResponse{Base: rr.GetBase(), Destination: rr.GetDestination(), Rate: r},
+				}})
 				if err != nil {
 					c.log.Error("Unable to send updated rate", "base", rr.GetBase(), "dest", rr.GetDestination(), "error", err)
 				}
@@ -91,6 +93,17 @@ func (c *Currency) Subscriberates(src protos.Currency_SubscriberatesServer) erro
 		rrs, ok := c.subscriptions[src]
 		if !ok {
 			rrs = []*protos.RateRequest{}
+		}
+
+		var validationError *status.Status
+		for _, v := range rrs {
+			if v.GetBase() == rr.GetBase() && v.GetDestination() == rr.GetDestination() {
+				validationError = status.Newf(codes.AlreadyExists, "Unable to subscribe. Subscription already exist.")
+			}
+		}
+
+		if validationError != nil {
+			src.Send(&protos.StreamingRateResponse{Message: &protos.StreamingRateResponse_Error{Error: validationError.Proto()}})
 		}
 
 		rrs = append(rrs, rr)

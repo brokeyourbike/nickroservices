@@ -38,8 +38,15 @@ func (p *Products) handleUpdates() {
 			return
 		}
 
-		p.log.Info("Received updated rate", "dest", resp.Destination, "rate", resp.GetRate())
-		p.rates[resp.Destination.String()] = resp.GetRate()
+		if grpcErr := resp.GetError(); grpcErr != nil {
+			p.log.Error("Error subscribing for rates", "error", grpcErr)
+			continue
+		}
+
+		if r := resp.GetRateResponse(); r != nil {
+			p.log.Info("Received updated rate", "dest", r.GetDestination(), "rate", r.GetRate())
+			p.rates[r.GetDestination().String()] = r.GetRate()
+		}
 	}
 }
 
