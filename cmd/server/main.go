@@ -11,7 +11,9 @@ import (
 	"github.com/brokeyourbike/nickroservices/protos"
 	"github.com/hashicorp/go-hclog"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 )
 
 type Currency struct {
@@ -52,6 +54,17 @@ func (c *Currency) handleUpdates() {
 
 func (c *Currency) GetRate(ctx context.Context, in *protos.RateRequest) (*protos.RateResponse, error) {
 	c.log.Info("Handle GetRate", "base", in.GetBase(), "destination", in.GetDestination())
+
+	if in.GetBase() == in.GetDestination() {
+		s := status.Newf(codes.InvalidArgument, "Base %s cannot be he same as the destination %s", in.GetBase(), in.GetDestination())
+
+		s, err := s.WithDetails(in)
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, s.Err()
+	}
 
 	rate, err := c.rates.GetRate(in.GetBase().String(), in.GetDestination().String())
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/brokeyourbike/nickroservices/protos"
 	"github.com/hashicorp/go-hclog"
+	"google.golang.org/grpc/status"
 )
 
 type Products struct {
@@ -67,11 +68,18 @@ func (p *Products) getRateFor(base, dest protos.Currencies) (float64, error) {
 	// get initial rate
 	resp, err := p.cc.GetRate(context.Background(), rr)
 	if err != nil {
-		return 0, err
+		if s, ok := status.FromError(err); ok {
+			meta := s.Details()[0].(*protos.RateRequest)
+			return -1, fmt.Errorf("Unable to get rate, invalid arguments, base %s, dest %s", meta.GetBase(), meta.GetDestination())
+		}
+
+		return -1, err
 	}
 
+	// update cache
 	p.rates[resp.Destination.String()] = resp.GetRate()
 
+	// subscribe for updates
 	err = p.client.Send(rr)
 
 	return resp.GetRate(), err
