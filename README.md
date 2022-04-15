@@ -1,6 +1,5 @@
 # nickroservices
 
-[![Latest Stable Version](https://img.shields.io/github/v/release/brokeyourbike/nickroservices)](https://github.com/brokeyourbike/nickroservices/releases)
 [![Go Reference](https://pkg.go.dev/badge/github.com/brokeyourbike/nickroservices.svg)](https://pkg.go.dev/github.com/brokeyourbike/nickroservices)
 [![Go Report Card](https://goreportcard.com/badge/github.com/brokeyourbike/nickroservices)](https://goreportcard.com/report/github.com/brokeyourbike/nickroservices)
 
