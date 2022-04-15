@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"io"
 	"net"
 	"os"
+	"time"
 
 	"github.com/brokeyourbike/nickroservices/data"
 	"github.com/brokeyourbike/nickroservices/protos"
@@ -31,6 +33,34 @@ func (c *Currency) GetRate(ctx context.Context, in *protos.RateRequest) (*protos
 	}
 
 	return &protos.RateResponse{Rate: rate}, nil
+}
+
+func (c *Currency) Subscriberates(src protos.Currency_SubscriberatesServer) error {
+
+	go func() {
+		for {
+			rr, err := src.Recv()
+			if err == io.EOF {
+				c.log.Info("Xlient has closed connection")
+				break
+			}
+			if err != nil {
+				c.log.Error("Unable to read from client", "error", err)
+				break
+			}
+
+			c.log.Info("Handle client request", "request", rr)
+		}
+	}()
+
+	for {
+		err := src.Send(&protos.RateResponse{Rate: 9.52})
+		if err != nil {
+			return err
+		}
+
+		time.Sleep(5 * time.Second)
+	}
 }
 
 func main() {
