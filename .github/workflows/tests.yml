@@ -2,9 +2,9 @@ name: tests
 
 on:
   push:
-    branches: [ main, grpc ]
+    branches: [ rest, grpc ]
   pull_request:
-    branches: [ main, grpc ]
+    branches: [ rest, grpc ]
 
 jobs:
 
