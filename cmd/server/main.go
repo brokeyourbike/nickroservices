@@ -15,13 +15,39 @@ import (
 )
 
 type Currency struct {
-	log   hclog.Logger
-	rates *data.ExchangeRates
+	log           hclog.Logger
+	rates         *data.ExchangeRates
+	subscriptions map[protos.Currency_SubscriberatesServer][]*protos.RateRequest
 	protos.UnimplementedCurrencyServer
 }
 
 func NewCurrency(l hclog.Logger, r *data.ExchangeRates) *Currency {
-	return &Currency{log: l, rates: r}
+	c := &Currency{log: l, rates: r, subscriptions: make(map[protos.Currency_SubscriberatesServer][]*protos.RateRequest)}
+	go c.handleUpdates()
+	return c
+}
+
+func (c *Currency) handleUpdates() {
+	ru := c.rates.MonitorRates(5 * time.Second)
+	for range ru {
+		c.log.Info("Got updated rates")
+
+		// loop over clients
+		for k, v := range c.subscriptions {
+			// loop over rates
+			for _, rr := range v {
+				r, err := c.rates.GetRate(rr.GetBase().String(), rr.GetDestination().String())
+				if err != nil {
+					c.log.Error("Unable to get update rate", "base", rr.GetBase(), "dest", rr.GetDestination(), "error", err)
+				}
+
+				err = k.Send(&protos.RateResponse{Base: rr.GetBase(), Destination: rr.GetDestination(), Rate: r})
+				if err != nil {
+					c.log.Error("Unable to send updated rate", "base", rr.GetBase(), "dest", rr.GetDestination(), "error", err)
+				}
+			}
+		}
+	}
 }
 
 func (c *Currency) GetRate(ctx context.Context, in *protos.RateRequest) (*protos.RateResponse, error) {
@@ -32,35 +58,33 @@ func (c *Currency) GetRate(ctx context.Context, in *protos.RateRequest) (*protos
 		return nil, err
 	}
 
-	return &protos.RateResponse{Rate: rate}, nil
+	return &protos.RateResponse{Base: in.GetBase(), Destination: in.GetDestination(), Rate: rate}, nil
 }
 
 func (c *Currency) Subscriberates(src protos.Currency_SubscriberatesServer) error {
-
-	go func() {
-		for {
-			rr, err := src.Recv()
-			if err == io.EOF {
-				c.log.Info("Xlient has closed connection")
-				break
-			}
-			if err != nil {
-				c.log.Error("Unable to read from client", "error", err)
-				break
-			}
-
-			c.log.Info("Handle client request", "request", rr)
-		}
-	}()
-
 	for {
-		err := src.Send(&protos.RateResponse{Rate: 9.52})
+		rr, err := src.Recv()
+		if err == io.EOF {
+			c.log.Info("Client has closed connection")
+			break
+		}
 		if err != nil {
-			return err
+			c.log.Error("Unable to read from client", "error", err)
+			break
 		}
 
-		time.Sleep(5 * time.Second)
+		c.log.Info("Handle client request", "request", rr)
+
+		rrs, ok := c.subscriptions[src]
+		if !ok {
+			rrs = []*protos.RateRequest{}
+		}
+
+		rrs = append(rrs, rr)
+		c.subscriptions[src] = rrs
 	}
+
+	return nil
 }
 
 func main() {
